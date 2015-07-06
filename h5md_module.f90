@@ -1,0 +1,187 @@
+module h5md_module
+  use hdf5
+  implicit none
+
+  private
+
+  public :: h5md_file_t, h5md_element_t
+
+  integer, parameter :: H5MD_FIXED = 1
+  integer, parameter :: H5MD_TIME = 2
+  integer, parameter :: H5MD_LINEAR = 4
+
+  type h5md_file_t
+     integer(HID_T) :: id
+     integer(HID_T) :: particles
+     integer(HID_T) :: observables
+     integer(HID_T) :: connectivity
+     integer(HID_T) :: parameters
+     integer :: error
+   contains
+     procedure :: open => h5md_file_open
+     procedure :: close => h5md_file_close
+  end type h5md_file_t
+
+  type h5md_element_t
+     integer :: type
+     integer(HID_T) :: id
+     integer(HID_T) :: v
+     integer(HID_T) :: s
+     integer(HID_T) :: t
+     logical :: has_time
+     integer :: error
+     integer :: Nmax
+   contains
+     procedure :: open_time => h5md_element_open_time
+  end type h5md_element_t
+
+contains
+
+  subroutine h5md_file_open(this, filename, flags)
+    class(h5md_file_t), intent(out) :: this
+    character(len=*), intent(in) :: filename
+    integer, intent(in) :: flags
+
+    integer(HID_T) :: g1
+    integer(HID_T) :: att, space
+    logical :: flag, link_exists
+    integer :: rank, version(2)
+    integer(HSIZE_T) :: dims(1), maxdims(1)
+
+    call h5fopen_f(filename, flags, this% id, this% error)
+    call check_error(this% error, 'error opening the file '//filename)
+
+    call h5oexists_by_name_f(this% id, 'h5md', link_exists, this% error)
+    if (.not. link_exists) stop 'h5md group not found'
+    call h5gopen_f(this% id, 'h5md', g1, this% error)
+    call check_error(this% error, '/h5md group not found in H5MD file')
+
+    call h5aopen_f(g1, 'version', att, this% error)
+    call check_error(this% error, 'h5md version not found in H5MD file')
+    call h5aget_space_f(att, space, this% error)
+    call h5sis_simple_f(space, flag, this% error)
+    if (.not. flag) then
+       write(*,*) 'h5md version not a simple dataspace'
+       stop
+    end if
+    call h5sget_simple_extent_ndims_f(space, rank, this% error)
+    if (rank /= 1) then
+       write(*,*) 'h5md version not of rank 1'
+       stop
+    end if
+    call h5sget_simple_extent_dims_f(space, dims, maxdims, this% error)
+    if (dims(1) /= 2) then
+       write(*,*) 'h5md version not of length 2'
+       stop
+    end if
+    call h5aread_f(att, H5T_NATIVE_INTEGER, version, dims, this% error)
+    call h5aclose_f(att, this% error)
+    call h5sclose_f(space, this% error)
+    call h5gclose_f(g1, this% error)
+
+    if (version(1) /= 1) then
+       stop 'unsupported H5MD version'
+    end if
+    if ( (version(2) /= 0) .and. (version(2) /= 1) ) then
+       stop 'unsupported H5MD version'
+    end if
+
+    call h5lexists_f(this% id, 'particles', link_exists, this% error)
+
+    if (.not. link_exists) then
+       write(*,*) 'particles group not found'
+    else
+       call h5gopen_f(this% id, 'particles', this% particles, this% error)
+       call check_error(this% error, '/particles group opening error')
+    end if
+
+  end subroutine h5md_file_open
+
+  subroutine h5md_file_close(this)
+    class(h5md_file_t), intent(inout) :: this
+
+    call h5fclose_f(this% id, this% error)
+
+  end subroutine h5md_file_close
+
+  subroutine h5md_element_open_time(this, loc, name)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+
+    integer(HID_T) :: space
+    integer(HSIZE_T), allocatable :: dims(:), maxdims(:)
+    logical :: link_exists
+    integer :: classtype, rank
+
+    call h5lexists_f(loc, name, link_exists, this% error)
+    call check_true(link_exists, 'element '//name//' not found')
+
+    call h5gopen_f(loc, name, this% id, this% error)
+    call h5dopen_f(this% id, 'value', this% v, this% error)
+    call h5dopen_f(this% id, 'step', this% s, this% error)
+    call h5dget_space_f(this% s, space, this% error)
+    call h5sget_simple_extent_type_f(space, classtype, this% error)
+    if (classtype == H5S_SCALAR_F) then
+       this% type = H5MD_LINEAR
+    else
+       this% type = H5MD_TIME
+    end if
+    call h5sclose_f(space, this% error)
+
+    call h5lexists_f(this% id, 'time', link_exists, this% error)
+    if (link_exists) then
+       call h5dopen_f(this% id, 'time', this% t, this% error)
+       call h5dget_space_f(this% s, space, this% error)
+       call h5sget_simple_extent_type_f(space, classtype, this% error)
+       if (this% type == H5MD_LINEAR) then
+          if (classtype /= H5S_SCALAR_F) then
+             stop 'inconsistent step and time datasets'
+          end if
+       end if
+       call h5sclose_f(space, this% error)
+    end if
+
+    call h5dget_space_f(this% v, space, this% error)
+    call h5sget_simple_extent_type_f(space, classtype, this% error)
+    if (classtype /= H5S_SIMPLE_F) then
+       stop 'non simple dataspace'
+    end if
+
+    call h5sget_simple_extent_ndims_f(space, rank, this% error)
+    allocate(dims(rank))
+    allocate(maxdims(rank))
+    call h5sget_simple_extent_dims_f(space, dims, maxdims, this% error)
+
+    this% Nmax = dims(2)
+
+    call h5sclose_f(space, this% error)
+
+    deallocate(dims)
+    deallocate(maxdims)
+
+  end subroutine h5md_element_open_time
+
+  subroutine check_error(e, msg)
+    integer, intent(in) :: e
+    character(len=*), intent(in) :: msg
+
+    if (e /= 0) then
+       write(*,*) msg
+       stop
+    end if
+
+  end subroutine check_error
+
+  subroutine check_true(flag, msg)
+    logical, intent(in) :: flag
+    character(len=*), intent(in) :: msg
+
+    if (.not. flag) then
+       write(*,*) msg
+       stop
+    end if
+
+  end subroutine check_true
+
+end module h5md_module
