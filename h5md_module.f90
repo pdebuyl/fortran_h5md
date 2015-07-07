@@ -5,6 +5,7 @@ module h5md_module
   private
 
   public :: h5md_file_t, h5md_element_t
+  public :: h5md_check_valid
 
   integer, parameter :: H5MD_FIXED = 1
   integer, parameter :: H5MD_TIME = 2
@@ -183,5 +184,25 @@ contains
     end if
 
   end subroutine check_true
+
+  subroutine h5md_check_valid(id, msg, strict)
+    integer(HID_T), intent(in) :: id
+    character(len=*), intent(in) :: msg
+    logical, intent(in), optional :: strict
+
+    logical :: valid
+    integer :: error
+
+    call h5iis_valid_f(id, valid, error)
+    if (.not. valid) then
+       write(*, *) msg
+       if (present(strict)) then
+          if (strict) stop
+       else
+          stop
+       end if
+    end if
+
+  end subroutine h5md_check_valid
 
 end module h5md_module
