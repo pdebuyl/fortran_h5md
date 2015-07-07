@@ -5,7 +5,7 @@ module h5md_module
   private
 
   public :: h5md_file_t, h5md_element_t
-  public :: h5md_check_valid
+  public :: h5md_check_valid, h5md_check_exists
 
   integer, parameter :: H5MD_FIXED = 1
   integer, parameter :: H5MD_TIME = 2
@@ -204,5 +204,23 @@ contains
     end if
 
   end subroutine h5md_check_valid
+
+  subroutine h5md_check_exists(loc, name, msg)
+    integer(HID_T), intent(in) :: loc
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: msg
+
+    logical :: exists
+    integer :: error
+
+
+    call h5lexists_f(loc, name, exists, error)
+
+    if (.not. exists) then
+       write(*, *) msg
+       stop
+    end if
+
+  end subroutine h5md_check_exists
 
 end module h5md_module
