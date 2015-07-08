@@ -101,6 +101,12 @@ contains
   subroutine h5md_file_close(this)
     class(h5md_file_t), intent(inout) :: this
 
+    logical :: valid
+
+    call h5iis_valid_f(this% particles, valid, this% error)
+    if (valid) then
+       call h5gclose_f(this% particles, this% error)
+    end if
     call h5fclose_f(this% id, this% error)
 
   end subroutine h5md_file_close
