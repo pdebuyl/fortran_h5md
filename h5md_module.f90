@@ -6,6 +6,7 @@ module h5md_module
 
   public :: h5md_file_t, h5md_element_t
   public :: h5md_check_valid, h5md_check_exists
+  public :: h5md_write_attribute
 
   integer, parameter :: H5MD_FIXED = 1
   integer, parameter :: H5MD_TIME = 2
@@ -34,11 +35,15 @@ module h5md_module
      integer :: error
      integer :: Nmax
    contains
+     generic, public :: create_fixed => h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
+     procedure, private :: h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
      procedure :: open_time => h5md_element_open_time
   end type h5md_element_t
 
   interface h5md_write_attribute
      module procedure h5md_write_attribute_cs
+     module procedure h5md_write_attribute_c1
+     module procedure h5md_write_attribute_is
      module procedure h5md_write_attribute_i1
   end interface h5md_write_attribute
 
@@ -50,7 +55,7 @@ contains
     character(len=*), intent(in) :: creator, creator_version, author
     character(len=*), intent(in), optional :: author_email
 
-    integer(HID_T) :: g1, g2, s, a
+    integer(HID_T) :: g1, g2
 
     call h5fcreate_f(filename, H5F_ACC_TRUNC_F, this% id, this% error)
 
@@ -202,6 +207,46 @@ contains
 
   end subroutine h5md_element_open_time
 
+  subroutine h5md_element_create_fixed_d1(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: data(:)
+
+    integer(HSIZE_T) :: dims(1)
+    integer :: s
+
+    dims = shape(data)
+
+    call h5screate_simple_f(1, dims, s, this% error)
+    call h5dcreate_f(loc, name, H5T_NATIVE_DOUBLE, s, this% id, this% error)
+    call h5dwrite_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_create_fixed_d1
+
+  subroutine h5md_element_create_fixed_d2(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: data(:,:)
+
+    integer(HSIZE_T) :: dims(2)
+    integer :: s
+
+    dims = shape(data)
+
+    call h5screate_simple_f(2, dims, s, this% error)
+    call h5dcreate_f(loc, name, H5T_NATIVE_DOUBLE, s, this% id, this% error)
+    call h5dwrite_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_create_fixed_d2
+
   subroutine check_error(e, msg)
     integer, intent(in) :: e
     character(len=*), intent(in) :: msg
@@ -283,6 +328,46 @@ contains
     call h5sclose_f(s, error)
 
   end subroutine h5md_write_attribute_cs
+
+  subroutine h5md_write_attribute_c1(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: value(:)
+
+    integer(HID_T) :: a, s, t
+    integer :: error
+    integer(HSIZE_T) :: dims(1), length
+
+    dims(1) = size(value)
+    length = len(value(1))
+    call h5screate_simple_f(1, dims, s, error)
+    call h5tcopy_f(H5T_NATIVE_CHARACTER, t, error)
+    call h5tset_size_f(t, length, error)
+    call h5tset_strpad_f(t, H5T_STR_NULLTERM_F, error)
+    call h5acreate_f(loc, name, t, s, a, error)
+    call h5awrite_f(a, t, value, dims, error)
+    call h5aclose_f(a, error)
+    call h5tclose_f(t, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_attribute_c1
+
+  subroutine h5md_write_attribute_is(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    integer, intent(in) :: value
+
+    integer(HID_T) :: a, s
+    integer :: error
+    integer(HSIZE_T) :: dims(1)
+
+    call h5screate_f(H5S_SCALAR_F, s, error)
+    call h5acreate_f(loc, name, H5T_NATIVE_INTEGER, s, a, error)
+    call h5awrite_f(a, H5T_NATIVE_INTEGER, value, dims, error)
+    call h5aclose_f(a, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_attribute_is
 
   subroutine h5md_write_attribute_i1(loc, name, value)
     integer(HID_T), intent(inout) :: loc
