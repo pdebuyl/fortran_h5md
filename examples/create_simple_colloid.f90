@@ -18,7 +18,7 @@ program create
   call f% create('simple_colloid.h5', 'fortran_h5md:create_simple_colloid', '0.0 dev', 'Pierre de Buyl')
   call h5gcreate_f(f% particles, 'colloids', colloids, error)
 
-  call h5gcreate_f(f% particles, 'box', box_group, error)
+  call h5gcreate_f(colloids, 'box', box_group, error)
 
   call h5md_write_attribute(box_group, 'dimension', 3)
   call h5md_write_attribute(box_group, 'boundary', ['none', 'none', 'none'])
