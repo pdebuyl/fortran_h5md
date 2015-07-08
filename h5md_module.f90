@@ -19,6 +19,7 @@ module h5md_module
      integer(HID_T) :: parameters
      integer :: error
    contains
+     procedure :: create => h5md_file_create
      procedure :: open => h5md_file_open
      procedure :: close => h5md_file_close
   end type h5md_file_t
@@ -37,6 +38,27 @@ module h5md_module
   end type h5md_element_t
 
 contains
+
+  subroutine h5md_file_create(this, filename, flags)
+    class(h5md_file_t), intent(out) :: this
+    character(len=*), intent(in) :: filename
+    integer, intent(in) :: flags
+
+    integer(HID_T) :: g1, g2, s, a
+
+    call h5fcreate_f(filename, flags, this% id, this% error)
+
+    call h5gcreate_f(this% id, 'h5md', g1, this% error)
+    call h5gcreate_f(g1, 'author', g2, this% error)
+    ! here attributes for author
+    call h5gclose_f(g2, this% error)
+    call h5gcreate_f(g1, 'creator', g2, this% error)
+    ! here attributes for creator
+    call h5gclose_f(g2, this% error)
+
+    call h5gcreate_f(this% id, 'particles', this% particles, this% error)
+
+  end subroutine h5md_file_create
 
   subroutine h5md_file_open(this, filename, flags)
     class(h5md_file_t), intent(out) :: this
