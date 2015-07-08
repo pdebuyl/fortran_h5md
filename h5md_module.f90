@@ -37,6 +37,11 @@ module h5md_module
      procedure :: open_time => h5md_element_open_time
   end type h5md_element_t
 
+  interface h5md_write_attribute
+     module procedure h5md_write_attribute_cs
+     module procedure h5md_write_attribute_i1
+  end interface h5md_write_attribute
+
 contains
 
   subroutine h5md_file_create(this, filename, flags)
@@ -49,11 +54,13 @@ contains
     call h5fcreate_f(filename, flags, this% id, this% error)
 
     call h5gcreate_f(this% id, 'h5md', g1, this% error)
+    call h5md_write_attribute(g1, 'version', [1, 1])
     call h5gcreate_f(g1, 'author', g2, this% error)
-    ! here attributes for author
+    call h5md_write_attribute(g2, 'name', 'Pierre')
     call h5gclose_f(g2, this% error)
     call h5gcreate_f(g1, 'creator', g2, this% error)
-    ! here attributes for creator
+    call h5md_write_attribute(g2, 'name', 'fortran_h5md/example')
+    call h5md_write_attribute(g2, 'version', 'N/A')
     call h5gclose_f(g2, this% error)
 
     call h5gcreate_f(this% id, 'particles', this% particles, this% error)
@@ -250,5 +257,46 @@ contains
     end if
 
   end subroutine h5md_check_exists
+
+  subroutine h5md_write_attribute_cs(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    character(len=*), intent(in) :: value
+
+    integer(HID_T) :: a, s, t
+    integer :: error
+    integer(HSIZE_T) :: dims(1)
+
+    call h5screate_f(H5S_SCALAR_F, s, error)
+    dims(1) = len(value)
+    call h5tcopy_f(H5T_NATIVE_CHARACTER, t, error)
+    call h5tset_size_f(t, dims(1), error)
+    call h5tset_strpad_f(t, H5T_STR_NULLTERM_F, error)
+    call h5acreate_f(loc, name, t, s, a, error)
+    call h5awrite_f(a, t, value, dims, error)
+    call h5aclose_f(a, error)
+    call h5tclose_f(t, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_attribute_cs
+
+  subroutine h5md_write_attribute_i1(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    integer, intent(in) :: value(:)
+
+    integer(HID_T) :: a, s, t
+    integer :: error
+    integer(HSIZE_T) :: dims(1)
+
+    dims(1) = size(value, dim=1)
+    call h5screate_simple_f(1, dims, s, error)
+    t = H5T_NATIVE_INTEGER
+    call h5acreate_f(loc, name, t, s, a, error)
+    call h5awrite_f(a, t, value, dims, error)
+    call h5aclose_f(a, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_attribute_i1
 
 end module h5md_module
