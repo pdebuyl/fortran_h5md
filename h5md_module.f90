@@ -7,6 +7,7 @@ module h5md_module
   public :: h5md_file_t, h5md_element_t
   public :: h5md_check_valid, h5md_check_exists
   public :: h5md_write_attribute
+  public :: H5MD_FIXED, H5MD_TIME, H5MD_LINEAR
 
   integer, parameter :: H5MD_FIXED = 1
   integer, parameter :: H5MD_TIME = 2
