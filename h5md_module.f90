@@ -44,23 +44,27 @@ module h5md_module
 
 contains
 
-  subroutine h5md_file_create(this, filename, flags)
+  subroutine h5md_file_create(this, filename, creator, creator_version, author, author_email)
     class(h5md_file_t), intent(out) :: this
     character(len=*), intent(in) :: filename
-    integer, intent(in) :: flags
+    character(len=*), intent(in) :: creator, creator_version, author
+    character(len=*), intent(in), optional :: author_email
 
     integer(HID_T) :: g1, g2, s, a
 
-    call h5fcreate_f(filename, flags, this% id, this% error)
+    call h5fcreate_f(filename, H5F_ACC_TRUNC_F, this% id, this% error)
 
     call h5gcreate_f(this% id, 'h5md', g1, this% error)
     call h5md_write_attribute(g1, 'version', [1, 1])
     call h5gcreate_f(g1, 'author', g2, this% error)
-    call h5md_write_attribute(g2, 'name', 'Pierre')
+    call h5md_write_attribute(g2, 'name', author)
+    if (present(author_email)) then
+       call h5md_write_attribute(g2, 'email', author_email)
+    end if
     call h5gclose_f(g2, this% error)
     call h5gcreate_f(g1, 'creator', g2, this% error)
-    call h5md_write_attribute(g2, 'name', 'fortran_h5md/example')
-    call h5md_write_attribute(g2, 'version', 'N/A')
+    call h5md_write_attribute(g2, 'name', creator)
+    call h5md_write_attribute(g2, 'version', creator_version)
     call h5gclose_f(g2, this% error)
 
     call h5gcreate_f(this% id, 'particles', this% particles, this% error)

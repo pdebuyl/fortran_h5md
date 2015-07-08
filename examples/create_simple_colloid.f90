@@ -9,7 +9,7 @@ program create
 
   call h5open_f(error)
 
-  call f% create('simple_colloid.h5', H5F_ACC_TRUNC_F)
+  call f% create('simple_colloid.h5', 'fortran_h5md:create_simple_colloid', '0.0 dev', 'Pierre de Buyl')
 
   call f% close()
 
