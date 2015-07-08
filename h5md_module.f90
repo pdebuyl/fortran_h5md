@@ -37,6 +37,8 @@ module h5md_module
    contains
      generic, public :: create_fixed => h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
      procedure, private :: h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
+     generic, public :: read_fixed => h5md_element_read_fixed_d2
+     procedure, private :: h5md_element_read_fixed_d2
      procedure :: open_time => h5md_element_open_time
   end type h5md_element_t
 
@@ -246,6 +248,32 @@ contains
     call h5sclose_f(s, this% error)
 
   end subroutine h5md_element_create_fixed_d2
+
+  subroutine h5md_element_read_fixed_d2(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(out), allocatable :: data(:,:)
+
+    integer(HSIZE_T) :: dims(2), maxdims(2)
+    integer(HID_T) :: s
+    integer :: rank
+    logical :: flag
+
+    call h5dopen_f(loc, name, this% id, this% error)
+    call h5dget_space_f(this% id, s, this% error)
+    call h5sis_simple_f(s, flag, this% error)
+    call check_true(flag, 'non-simple dataset in read_fixed')
+    call h5sget_simple_extent_ndims_f(s, rank, this% error)
+    call check_true((rank == 2), 'rank /= 2 in read_fixed')
+    call h5sget_simple_extent_dims_f(s, dims, maxdims, this% error)
+
+    allocate(data(dims(1), dims(2)))
+    call h5dread_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_read_fixed_d2
 
   subroutine check_error(e, msg)
     integer, intent(in) :: e
