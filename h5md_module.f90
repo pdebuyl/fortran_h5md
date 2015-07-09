@@ -46,6 +46,7 @@ module h5md_module
      procedure, private :: h5md_element_create_time_d2
      generic, public :: append => h5md_element_append_d2
      procedure, private :: h5md_element_append_d2
+     procedure :: close => h5md_element_close
   end type h5md_element_t
 
   interface h5md_write_attribute
@@ -156,6 +157,30 @@ contains
     call h5fclose_f(this% id, this% error)
 
   end subroutine h5md_file_close
+
+  subroutine h5md_element_close(this)
+    class(h5md_element_t), intent(inout) :: this
+
+    logical :: valid
+
+    if (this% type == H5MD_FIXED) then
+       return
+    else
+       call h5iis_valid_f(this% s, valid, this% error)
+       if (valid) then
+          call h5dclose_f(this% s, this% error)
+       end if
+       call h5iis_valid_f(this% t, valid, this% error)
+       if (valid) then
+          call h5dclose_f(this% t, this% error)
+       end if
+       call h5iis_valid_f(this% v, valid, this% error)
+       if (valid) then
+          call h5dclose_f(this% v, this% error)
+       end if
+    end if
+
+  end subroutine h5md_element_close
 
   subroutine h5md_element_create_time_d2(this, loc, name, data, mode, step, time)
     class(h5md_element_t), intent(out) :: this
