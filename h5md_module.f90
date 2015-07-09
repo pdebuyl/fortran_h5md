@@ -41,6 +41,8 @@ module h5md_module
      generic, public :: read_fixed => h5md_element_read_fixed_d2
      procedure, private :: h5md_element_read_fixed_d2
      procedure :: open_time => h5md_element_open_time
+     generic, public :: create_time => h5md_element_create_time_d2
+     procedure, private :: h5md_element_create_time_d2
   end type h5md_element_t
 
   interface h5md_write_attribute
@@ -151,6 +153,69 @@ contains
     call h5fclose_f(this% id, this% error)
 
   end subroutine h5md_file_close
+
+  subroutine h5md_element_create_time_d2(this, loc, name, data, mode, step, time)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: data(:,:)
+    integer, intent(in) :: mode
+    integer, intent(in), optional :: step
+    double precision, intent(in), optional :: time
+
+    integer, parameter :: rank = 3
+    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
+    integer(HID_T) :: s, plist
+
+    call h5gcreate_f(loc, name, this% id, this% error)
+    call h5md_check_valid(this% id, 'invalid id in create_time')
+
+    dims(1) = size(data, 1)
+    maxdims(1) = dims(1)
+    chunk_dims(1) = dims(1)
+    dims(2) = size(data, 2)
+    maxdims(2) = dims(2)
+    chunk_dims(2) = 64
+    dims(3) = 0
+    maxdims(3) = H5S_UNLIMITED_F
+    chunk_dims(3) = 1
+
+    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
+
+    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
+    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
+    call h5dcreate_f(this% id, 'value', H5T_NATIVE_DOUBLE, s, this% v, this% error, plist)
+    call h5pclose_f(plist, this% error)
+    call h5sclose_f(s, this% error)
+
+    if (mode == H5MD_TIME) then
+       dims(1) = 0
+       maxdims(1) = H5S_UNLIMITED_F
+       chunk_dims(1) = 8
+       call h5screate_simple_f(1, dims, s, this% error, maxdims)
+       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
+       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
+       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
+       call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
+       call h5pclose_f(plist, this% error)
+       call h5sclose_f(s, this% error)
+    else if (mode == H5MD_LINEAR) then
+       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
+       call h5screate_f(H5S_SCALAR_F, s, this% error)
+       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
+       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       call h5dclose_F(this% s, this% error)
+       if (present(time)) then
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          call h5dclose_F(this% t, this% error)
+       end if
+       call h5sclose_f(s, this% error)
+    end if
+
+    this% type = mode
+
+  end subroutine h5md_element_create_time_d2
 
   subroutine h5md_element_open_time(this, loc, name)
     class(h5md_element_t), intent(out) :: this
