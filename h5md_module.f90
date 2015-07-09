@@ -582,11 +582,15 @@ contains
     integer :: error
 
     call h5dget_space_f(dset, s, error)
+    call check_error(error, 'get_space error in h5md_extend')
     call h5sget_simple_extent_ndims_f(s, rank, error)
+    call check_error(error, 'get_simple_extent_ndims error')
     call h5sget_simple_extent_dims_f(s, dims, maxdims, error)
     dims(rank) = dims(rank) + 1
-    call h5dset_extent_f(dset, dims, error)
     call h5sclose_f(s, error)
+    call check_error(error, 'h5sclose error')
+    call h5dset_extent_f(dset, dims, error)
+    call check_error(error, 'set_extent error')
 
   end subroutine h5md_extend
 
