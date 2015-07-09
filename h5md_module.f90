@@ -156,6 +156,7 @@ contains
        call h5gclose_f(this% particles, this% error)
     end if
     call h5fclose_f(this% id, this% error)
+    call check_error(this% error, 'file close error')
 
   end subroutine h5md_file_close
 
