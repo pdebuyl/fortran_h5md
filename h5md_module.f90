@@ -80,6 +80,7 @@ contains
     call h5md_write_attribute(g2, 'name', creator)
     call h5md_write_attribute(g2, 'version', creator_version)
     call h5gclose_f(g2, this% error)
+    call h5gclose_f(g1, this% error)
 
     call h5gcreate_f(this% id, 'particles', this% particles, this% error)
 
