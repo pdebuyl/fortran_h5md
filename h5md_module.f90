@@ -235,10 +235,13 @@ contains
 
     integer, parameter :: rank=3
     integer :: r
-    integer(HID_T) :: s
+    integer(HID_T) :: s, mem_s
     integer(HSIZE_T) :: dims(rank), maxdims(rank), start(rank), select_count(rank)
 
     if (this% type == H5MD_FIXED) return
+
+    dims(1:rank-1) = shape(data)
+    call h5screate_simple_f(rank-1, dims, mem_s, this% error)
 
     call h5md_extend(this% v, r, dims, maxdims)
     call check_true((r == rank), 'invalid rank for v in append')
@@ -248,16 +251,19 @@ contains
     select_count = dims
     select_count(3) = 1
     call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
-    call h5dwrite_f(this% v, H5T_NATIVE_DOUBLE, data, select_count, this% error, H5S_ALL_F, s)
+    call h5dwrite_f(this% v, H5T_NATIVE_DOUBLE, data, select_count, this% error, mem_s, s)
     call h5sclose_f(s, this% error)
+    call h5sclose_f(mem_s, this% error)
 
     if (this% type == H5MD_TIME) then
+       dims(1) = 1
+       call h5screate_simple_f(1, dims, mem_s, this% error)
        call h5md_extend(this% s, r, dims, maxdims)
        call h5dget_space_f(this% s, s, this% error)
        start(1) = dims(1)-1
        select_count = 1
        call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, select_count, this% error, H5S_ALL_F, s)
+       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, select_count, this% error, mem_s, s)
        call h5sclose_f(s, this% error)
 
        if (present(time) .and. this% has_time) then
@@ -266,9 +272,10 @@ contains
           start(1) = dims(1)-1
           select_count = 1
           call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, step, select_count, this% error, H5S_ALL_F, s)
+          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, select_count, this% error, mem_s, s)
           call h5sclose_f(s, this% error)
        end if
+       call h5sclose_f(mem_s, this% error)
     end if
 
   end subroutine h5md_element_append_d2
