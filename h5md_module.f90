@@ -250,7 +250,7 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-
+    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_d2
 
