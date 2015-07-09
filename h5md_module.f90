@@ -436,6 +436,7 @@ contains
     character(len=*), intent(in) :: msg
 
     if (e /= 0) then
+       write(*,*) 'error code ', e
        write(*,*) msg
        stop
     end if
