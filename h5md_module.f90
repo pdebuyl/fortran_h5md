@@ -7,11 +7,12 @@ module h5md_module
   public :: h5md_file_t, h5md_element_t
   public :: h5md_check_valid, h5md_check_exists
   public :: h5md_write_attribute
-  public :: H5MD_FIXED, H5MD_TIME, H5MD_LINEAR
+  public :: H5MD_FIXED, H5MD_TIME, H5MD_LINEAR, H5MD_STORE_TIME
 
   integer, parameter :: H5MD_FIXED = 1
   integer, parameter :: H5MD_TIME = 2
   integer, parameter :: H5MD_LINEAR = 4
+  integer, parameter :: H5MD_STORE_TIME = 8
 
   type h5md_file_t
      integer(HID_T) :: id
@@ -43,6 +44,8 @@ module h5md_module
      procedure :: open_time => h5md_element_open_time
      generic, public :: create_time => h5md_element_create_time_d2
      procedure, private :: h5md_element_create_time_d2
+     generic, public :: append => h5md_element_append_d2
+     procedure, private :: h5md_element_append_d2
   end type h5md_element_t
 
   interface h5md_write_attribute
@@ -188,7 +191,8 @@ contains
     call h5pclose_f(plist, this% error)
     call h5sclose_f(s, this% error)
 
-    if (mode == H5MD_TIME) then
+    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
+       this% type = H5MD_TIME
        dims(1) = 0
        maxdims(1) = H5S_UNLIMITED_F
        chunk_dims(1) = 8
@@ -196,16 +200,23 @@ contains
        call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
        call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
+       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
+          this% has_time = .true.
+       else
+          this% has_time = .false.
+       end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
     else if (mode == H5MD_LINEAR) then
+       this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       if (present(time)) then
+       this% has_time = present(time)
+       if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
@@ -213,9 +224,54 @@ contains
        call h5sclose_f(s, this% error)
     end if
 
-    this% type = mode
 
   end subroutine h5md_element_create_time_d2
+
+  subroutine h5md_element_append_d2(this, data, step, time)
+    class(h5md_element_t), intent(inout) :: this
+    double precision, intent(in) :: data(:,:)
+    integer, intent(in), optional :: step
+    double precision, intent(in), optional :: time
+
+    integer, parameter :: rank=3
+    integer :: r
+    integer(HID_T) :: s
+    integer(HSIZE_T) :: dims(rank), maxdims(rank), start(rank), select_count(rank)
+
+    if (this% type == H5MD_FIXED) return
+
+    call h5md_extend(this% v, r, dims, maxdims)
+    call check_true((r == rank), 'invalid rank for v in append')
+    call h5dget_space_f(this% v, s, this% error)
+    start = 0
+    start(3) = dims(3)-1
+    select_count = dims
+    select_count(3) = 1
+    call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
+    call h5dwrite_f(this% v, H5T_NATIVE_DOUBLE, data, select_count, this% error, H5S_ALL_F, s)
+    call h5sclose_f(s, this% error)
+
+    if (this% type == H5MD_TIME) then
+       call h5md_extend(this% s, r, dims, maxdims)
+       call h5dget_space_f(this% s, s, this% error)
+       start(1) = dims(1)-1
+       select_count = 1
+       call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
+       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, select_count, this% error, H5S_ALL_F, s)
+       call h5sclose_f(s, this% error)
+
+       if (present(time) .and. this% has_time) then
+          call h5md_extend(this% t, r, dims, maxdims)
+          call h5dget_space_f(this% t, s, this% error)
+          start(1) = dims(1)-1
+          select_count = 1
+          call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
+          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, step, select_count, this% error, H5S_ALL_F, s)
+          call h5sclose_f(s, this% error)
+       end if
+    end if
+
+  end subroutine h5md_element_append_d2
 
   subroutine h5md_element_open_time(this, loc, name)
     class(h5md_element_t), intent(out) :: this
@@ -481,5 +537,22 @@ contains
     call h5sclose_f(s, error)
 
   end subroutine h5md_write_attribute_i1
+
+  subroutine h5md_extend(dset, rank, dims, maxdims)
+    integer(HID_T), intent(inout) :: dset
+    integer, intent(out) :: rank
+    integer(HSIZE_T), intent(out) :: dims(:), maxdims(:)
+
+    integer(HID_T) :: s
+    integer :: error
+
+    call h5dget_space_f(dset, s, error)
+    call h5sget_simple_extent_ndims_f(s, rank, error)
+    call h5sget_simple_extent_dims_f(s, dims, maxdims, error)
+    dims(rank) = dims(rank) + 1
+    call h5dset_extent_f(dset, dims, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_extend
 
 end module h5md_module
