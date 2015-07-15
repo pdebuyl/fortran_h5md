@@ -1,3 +1,7 @@
+! This file is part of fortran_h5md
+! Copyright 2015 Pierre de Buyl
+! License: BSD
+
 module h5md_module
   use hdf5
   implicit none
