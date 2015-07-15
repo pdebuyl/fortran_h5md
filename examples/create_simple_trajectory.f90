@@ -65,6 +65,7 @@ program create
 
   call pos_e% close()
   call vel_e% close()
+  call temp_e% close()
 
   call f% close()
 
