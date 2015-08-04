@@ -209,7 +209,7 @@ contains
     chunk_dims(1) = dims(1)
     dims(2) = size(data, 2)
     maxdims(2) = dims(2)
-    chunk_dims(2) = min(dims(2), 128)
+    chunk_dims(2) = min(dims(2), int(128, HSIZE_T))
     dims(3) = 0
     maxdims(3) = H5S_UNLIMITED_F
     chunk_dims(3) = 1
