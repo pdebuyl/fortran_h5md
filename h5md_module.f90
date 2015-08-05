@@ -621,11 +621,13 @@ contains
     integer(HID_T) :: a, s, t
     integer :: error
     integer(HSIZE_T) :: dims(1)
+    integer(SIZE_T) :: length
 
     call h5screate_f(H5S_SCALAR_F, s, error)
     dims(1) = len(value)
+    length = len(value)
     call h5tcopy_f(H5T_NATIVE_CHARACTER, t, error)
-    call h5tset_size_f(t, dims(1), error)
+    call h5tset_size_f(t, length, error)
     call h5tset_strpad_f(t, H5T_STR_NULLTERM_F, error)
     call h5acreate_f(loc, name, t, s, a, error)
     call h5awrite_f(a, t, value, dims, error)
@@ -642,7 +644,8 @@ contains
 
     integer(HID_T) :: a, s, t
     integer :: error
-    integer(HSIZE_T) :: dims(1), length
+    integer(HSIZE_T) :: dims(1)
+    integer(SIZE_T) :: length
 
     dims(1) = size(value)
     length = len(value(1))
