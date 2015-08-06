@@ -42,14 +42,17 @@ module h5md_module
      integer :: Nmax
    contains
      generic, public :: create_fixed => h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
-     procedure, private :: h5md_element_create_fixed_d2, h5md_element_create_fixed_d1
+     procedure, private :: h5md_element_create_fixed_d2
+     procedure, private :: h5md_element_create_fixed_d1
      generic, public :: read_fixed => h5md_element_read_fixed_d2
      procedure, private :: h5md_element_read_fixed_d2
      procedure :: open_time => h5md_element_open_time
      generic, public :: create_time => h5md_element_create_time_d2, h5md_element_create_time_ds
-     procedure, private :: h5md_element_create_time_d2, h5md_element_create_time_ds
+     procedure, private :: h5md_element_create_time_d2
+     procedure, private :: h5md_element_create_time_ds
      generic, public :: append => h5md_element_append_d2, h5md_element_append_ds
-     procedure, private :: h5md_element_append_d2, h5md_element_append_ds
+     procedure, private :: h5md_element_append_d2
+     procedure, private :: h5md_element_append_ds
      procedure :: close => h5md_element_close
   end type h5md_element_t
 
