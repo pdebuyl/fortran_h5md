@@ -1,0 +1,5 @@
+add_executable(create_simple_colloid create_simple_colloid.f90)
+target_link_libraries(create_simple_colloid fortran_h5md)
+
+add_executable(create_simple_trajectory create_simple_trajectory.f90)
+target_link_libraries(create_simple_trajectory fortran_h5md)
