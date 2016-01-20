@@ -64,6 +64,8 @@ module h5md_module
      procedure, private :: h5md_element_append_ds
      procedure, private :: h5md_element_append_i1
      procedure, private :: h5md_element_append_i2
+     procedure, public :: append_buffer => h5md_element_append_buffer_s
+     procedure, private :: h5md_element_append_buffer_s
      procedure :: close => h5md_element_close
   end type h5md_element_t
 
@@ -101,6 +103,7 @@ contains
     call h5gclose_f(g1, this% error)
 
     call h5gcreate_f(this% id, 'particles', this% particles, this% error)
+    call h5gcreate_f(this% id, 'observables', this%observables, this% error)
 
   end subroutine h5md_file_create
 
@@ -1116,25 +1119,65 @@ contains
 
   end subroutine h5md_write_attribute_i1
 
-  subroutine h5md_extend(dset, rank, dims, maxdims)
+  subroutine h5md_extend(dset, rank, dims, maxdims, ext_size)
     integer(HID_T), intent(inout) :: dset
     integer, intent(out) :: rank
     integer(HSIZE_T), intent(out) :: dims(:), maxdims(:)
+    integer(HSIZE_T), intent(in), optional :: ext_size
 
     integer(HID_T) :: s
     integer :: error
+    integer(HSIZE_T) :: ext
+
+    if (present(ext_size)) then
+       ext = ext_size
+    else
+       ext = 1
+    end if
 
     call h5dget_space_f(dset, s, error)
     call check_error(error, 'get_space error in h5md_extend')
     call h5sget_simple_extent_ndims_f(s, rank, error)
     call check_error(error, 'get_simple_extent_ndims error')
     call h5sget_simple_extent_dims_f(s, dims, maxdims, error)
-    dims(rank) = dims(rank) + 1
+    dims(rank) = dims(rank) + ext
     call h5sclose_f(s, error)
     call check_error(error, 'h5sclose error')
     call h5dset_extent_f(dset, dims, error)
     call check_error(error, 'set_extent error')
 
   end subroutine h5md_extend
+
+  subroutine h5md_element_append_buffer_s(this, data, step, time)
+    class(h5md_element_t), intent(inout) :: this
+    double precision, intent(in) :: data(:)
+    integer, intent(in), optional :: step
+    double precision, intent(in), optional :: time
+
+    integer, parameter :: rank=1
+    integer :: r
+    integer(HID_T) :: s, mem_s
+    integer(HSIZE_T) :: dims(rank), maxdims(rank), start(rank), select_count(rank)
+    integer(HSIZE_T) :: buffer_size
+
+    if (this% type == H5MD_FIXED) return
+
+    dims = shape(data)
+    buffer_size = dims(rank)
+    call h5screate_simple_f(rank, dims, mem_s, this% error)
+
+    call h5md_extend(this% v, r, dims, maxdims, buffer_size)
+    call check_true((r == rank), 'invalid rank for v in append')
+    call h5dget_space_f(this% v, s, this% error)
+    start = 0
+    start(rank) = dims(rank)-buffer_size
+    select_count = dims
+    select_count(rank) = buffer_size
+    call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
+    call h5dwrite_f(this% v, H5T_NATIVE_DOUBLE, data, select_count, this% error, mem_s, s)
+    call h5sclose_f(s, this% error)
+    call h5sclose_f(mem_s, this% error)
+
+  end subroutine h5md_element_append_buffer_s
 
 end module h5md_module
