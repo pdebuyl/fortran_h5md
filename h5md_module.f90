@@ -256,14 +256,14 @@ contains
        end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
-    else if (mode == H5MD_LINEAR) then
+    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
        this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       this% has_time = present(time)
+       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
@@ -323,14 +323,14 @@ contains
        end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
-    else if (mode == H5MD_LINEAR) then
+    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
        this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       this% has_time = present(time)
+       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
@@ -387,14 +387,14 @@ contains
        end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
-    else if (mode == H5MD_LINEAR) then
+    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
        this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       this% has_time = present(time)
+       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
@@ -454,14 +454,14 @@ contains
        end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
-    else if (mode == H5MD_LINEAR) then
+    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
        this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       this% has_time = present(time)
+       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
@@ -524,14 +524,14 @@ contains
        end if
        call h5pclose_f(plist, this% error)
        call h5sclose_f(s, this% error)
-    else if (mode == H5MD_LINEAR) then
+    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
        this% type = H5MD_LINEAR
        if (.not. present(step)) stop 'step required for H5MD_LINEAR'
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
        call h5dclose_F(this% s, this% error)
-       this% has_time = present(time)
+       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
