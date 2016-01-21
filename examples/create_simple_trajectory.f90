@@ -22,7 +22,6 @@ program create
   call h5gcreate_f(f% particles, 'colloids', colloids, error)
 
   call h5gcreate_f(colloids, 'box', box_group, error)
-  call h5gcreate_f(f% id, 'observables', f% observables, error)
 
   call h5md_write_attribute(box_group, 'dimension', 3)
   call h5md_write_attribute(box_group, 'boundary', ['none', 'none', 'none'])
