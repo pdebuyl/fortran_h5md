@@ -265,7 +265,7 @@ contains
        call h5dclose_F(this% s, this% error)
        this% has_time = present(time)
        if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
        end if
@@ -332,7 +332,7 @@ contains
        call h5dclose_F(this% s, this% error)
        this% has_time = present(time)
        if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
        end if
@@ -396,7 +396,7 @@ contains
        call h5dclose_F(this% s, this% error)
        this% has_time = present(time)
        if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
        end if
@@ -463,7 +463,7 @@ contains
        call h5dclose_F(this% s, this% error)
        this% has_time = present(time)
        if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
        end if
@@ -533,7 +533,7 @@ contains
        call h5dclose_F(this% s, this% error)
        this% has_time = present(time)
        if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_INTEGER, s, this% t, this% error)
+          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
           call h5dclose_F(this% t, this% error)
        end if
