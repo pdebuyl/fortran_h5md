@@ -1148,11 +1148,12 @@ contains
 
   end subroutine h5md_extend
 
-  subroutine h5md_element_append_buffer_s(this, data, step, time)
+  subroutine h5md_element_append_buffer_s(this, data, step, time, force_size)
     class(h5md_element_t), intent(inout) :: this
     double precision, intent(in) :: data(:)
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    integer, intent(in), optional :: force_size
 
     integer, parameter :: rank=1
     integer :: r
@@ -1163,7 +1164,16 @@ contains
     if (this% type == H5MD_FIXED) return
 
     dims = shape(data)
-    buffer_size = dims(rank)
+    if (present(force_size)) then
+       if (force_size>0) then
+          buffer_size = force_size
+          dims(rank) = buffer_size
+       else
+          buffer_size = dims(rank)
+       end if
+    else
+       buffer_size = dims(rank)
+    end if
     call h5screate_simple_f(rank, dims, mem_s, this% error)
 
     call h5md_extend(this% v, r, dims, maxdims, buffer_size)
