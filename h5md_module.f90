@@ -983,7 +983,11 @@ contains
     allocate(maxdims(rank))
     call h5sget_simple_extent_dims_f(space, dims, maxdims, this% error)
 
-    this% Nmax = dims(2)
+    if (rank >= 2) then
+       this%Nmax = int(dims(2))
+    else
+       this%Nmax = 0
+    end if
 
     call h5sclose_f(space, this% error)
 
