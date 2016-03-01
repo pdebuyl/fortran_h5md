@@ -68,8 +68,9 @@ module h5md_module
      procedure, private :: h5md_element_append_i1
      procedure, private :: h5md_element_append_i2
      procedure, private :: h5md_element_append_i3
-     procedure, public :: append_buffer => h5md_element_append_buffer_s
+     generic, public :: append_buffer => h5md_element_append_buffer_s, h5md_element_append_buffer_d1
      procedure, private :: h5md_element_append_buffer_s
+     procedure, private :: h5md_element_append_buffer_d1
      procedure :: close => h5md_element_close
   end type h5md_element_t
 
@@ -1318,5 +1319,47 @@ contains
     call h5sclose_f(mem_s, this% error)
 
   end subroutine h5md_element_append_buffer_s
+
+  subroutine h5md_element_append_buffer_d1(this, data, step, time, force_size)
+    class(h5md_element_t), intent(inout) :: this
+    double precision, intent(in) :: data(:,:)
+    integer, intent(in), optional :: step
+    double precision, intent(in), optional :: time
+    integer, intent(in), optional :: force_size
+
+    integer, parameter :: rank=2
+    integer :: r
+    integer(HID_T) :: s, mem_s
+    integer(HSIZE_T) :: dims(rank), maxdims(rank), start(rank), select_count(rank)
+    integer(HSIZE_T) :: buffer_size
+
+    if (this% type == H5MD_FIXED) return
+
+    dims = shape(data)
+    if (present(force_size)) then
+       if (force_size>0) then
+          buffer_size = force_size
+          dims(rank) = buffer_size
+       else
+          buffer_size = dims(rank)
+       end if
+    else
+       buffer_size = dims(rank)
+    end if
+    call h5screate_simple_f(rank, dims, mem_s, this% error)
+
+    call h5md_extend(this% v, r, dims, maxdims, buffer_size)
+    call check_true((r == rank), 'invalid rank for v in append')
+    call h5dget_space_f(this% v, s, this% error)
+    start = 0
+    start(rank) = dims(rank)-buffer_size
+    select_count = dims
+    select_count(rank) = buffer_size
+    call h5sselect_hyperslab_f(s, H5S_SELECT_SET_F, start, select_count, this% error)
+    call h5dwrite_f(this% v, H5T_NATIVE_DOUBLE, data, select_count, this% error, mem_s, s)
+    call h5sclose_f(s, this% error)
+    call h5sclose_f(mem_s, this% error)
+
+  end subroutine h5md_element_append_buffer_d1
 
 end module h5md_module
