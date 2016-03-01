@@ -11,6 +11,7 @@ module h5md_module
   public :: h5md_file_t, h5md_element_t
   public :: h5md_check_valid, h5md_check_exists
   public :: h5md_write_attribute
+  public :: h5md_write_dataset
   public :: H5MD_FIXED, H5MD_TIME, H5MD_LINEAR, H5MD_STORE_TIME
 
   integer, parameter :: H5MD_FIXED = 1
@@ -80,6 +81,10 @@ module h5md_module
      module procedure h5md_write_attribute_is
      module procedure h5md_write_attribute_i1
   end interface h5md_write_attribute
+
+  interface h5md_write_dataset
+     module procedure h5md_write_dataset_ds
+  end interface h5md_write_dataset
 
 contains
 
@@ -1361,5 +1366,25 @@ contains
     call h5sclose_f(mem_s, this% error)
 
   end subroutine h5md_element_append_buffer_d1
+
+  subroutine h5md_write_dataset_ds(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: value
+
+    integer(HID_T) :: d, s, t
+    integer :: error
+    integer(HSIZE_T) :: dims(1)
+
+    t = H5T_NATIVE_DOUBLE
+    dims(1) = 1
+
+    call h5screate_f(H5S_SCALAR_F, s, error)
+    call h5dcreate_f(loc, name, t, s, d, error)
+    call h5dwrite_f(d, t, value, dims, error)
+    call h5dclose_f(d, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_dataset_ds
 
 end module h5md_module
