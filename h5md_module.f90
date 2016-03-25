@@ -200,6 +200,10 @@ contains
     if (this% type == H5MD_FIXED) then
        return
     else
+       call h5iis_valid_f(this% id, valid, this% error)
+       if (valid) then
+          call h5gclose_f(this% id, this% error)
+       end if
        call h5iis_valid_f(this% s, valid, this% error)
        if (valid) then
           call h5dclose_f(this% s, this% error)
@@ -282,7 +286,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_d2
 
@@ -349,7 +352,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_d1
 
@@ -413,7 +415,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_ds
 
@@ -480,7 +481,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_i1
 
@@ -550,7 +550,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_i2
 
@@ -618,7 +617,6 @@ contains
        end if
        call h5sclose_f(s, this% error)
     end if
-    call h5gclose_f(this% id, this% error)
 
   end subroutine h5md_element_create_time_i3
 
