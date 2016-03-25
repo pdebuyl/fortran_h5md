@@ -80,6 +80,7 @@ module h5md_module
      module procedure h5md_write_attribute_c1
      module procedure h5md_write_attribute_is
      module procedure h5md_write_attribute_i1
+     module procedure h5md_write_attribute_ds
   end interface h5md_write_attribute
 
   interface h5md_write_dataset
@@ -1253,6 +1254,23 @@ contains
     call h5sclose_f(s, error)
 
   end subroutine h5md_write_attribute_i1
+
+  subroutine h5md_write_attribute_ds(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: value
+
+    integer(HID_T) :: a, s
+    integer :: error
+    integer(HSIZE_T) :: dims(1)
+
+    call h5screate_f(H5S_SCALAR_F, s, error)
+    call h5acreate_f(loc, name, H5T_NATIVE_DOUBLE, s, a, error)
+    call h5awrite_f(a, H5T_NATIVE_DOUBLE, value, dims, error)
+    call h5aclose_f(a, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_attribute_ds
 
   subroutine h5md_extend(dset, rank, dims, maxdims, ext_size)
     integer(HID_T), intent(inout) :: dset
