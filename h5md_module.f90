@@ -43,7 +43,10 @@ module h5md_module
      integer :: Nmax
    contains
      generic, public :: create_fixed => h5md_element_create_fixed_d2, h5md_element_create_fixed_d1, &
-          h5md_element_create_fixed_i1, h5md_element_create_fixed_i2
+          h5md_element_create_fixed_i1, h5md_element_create_fixed_i2, h5md_element_create_fixed_d3, &
+          h5md_element_create_fixed_d4
+     procedure, private :: h5md_element_create_fixed_d4
+     procedure, private :: h5md_element_create_fixed_d3
      procedure, private :: h5md_element_create_fixed_d2
      procedure, private :: h5md_element_create_fixed_d1
      procedure, private :: h5md_element_create_fixed_i1
@@ -1162,6 +1165,46 @@ contains
     call h5sclose_f(s, this% error)
 
   end subroutine h5md_element_create_fixed_d2
+
+  subroutine h5md_element_create_fixed_d3(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: data(:,:,:)
+
+    integer(HSIZE_T) :: dims(3)
+    integer :: s
+
+    dims = shape(data)
+
+    call h5screate_simple_f(3, dims, s, this% error)
+    call h5dcreate_f(loc, name, H5T_NATIVE_DOUBLE, s, this% id, this% error)
+    call h5dwrite_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_create_fixed_d3
+
+  subroutine h5md_element_create_fixed_d4(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: data(:,:,:,:)
+
+    integer(HSIZE_T) :: dims(4)
+    integer :: s
+
+    dims = shape(data)
+
+    call h5screate_simple_f(4, dims, s, this% error)
+    call h5dcreate_f(loc, name, H5T_NATIVE_DOUBLE, s, this% id, this% error)
+    call h5dwrite_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_create_fixed_d4
 
   subroutine h5md_element_create_fixed_i1(this, loc, name, data)
     class(h5md_element_t), intent(out) :: this
