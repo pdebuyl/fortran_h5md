@@ -230,7 +230,7 @@ contains
 
   end subroutine h5md_element_close
 
-  subroutine h5md_element_create_time_d2(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_d2(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -238,6 +238,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 3
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -287,11 +288,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -299,7 +306,7 @@ contains
 
   end subroutine h5md_element_create_time_d2
 
-  subroutine h5md_element_create_time_d1(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_d1(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -307,6 +314,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 2
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -353,11 +361,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -365,7 +379,7 @@ contains
 
   end subroutine h5md_element_create_time_d1
 
-  subroutine h5md_element_create_time_ds(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_ds(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -373,6 +387,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 1
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -416,11 +431,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -428,7 +449,7 @@ contains
 
   end subroutine h5md_element_create_time_ds
 
-  subroutine h5md_element_create_time_d3(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_d3(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -436,6 +457,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 4
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -482,11 +504,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -494,7 +522,7 @@ contains
 
   end subroutine h5md_element_create_time_d3
 
-  subroutine h5md_element_create_time_i1(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_i1(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -502,6 +530,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 2
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -548,11 +577,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -560,7 +595,7 @@ contains
 
   end subroutine h5md_element_create_time_i1
 
-  subroutine h5md_element_create_time_i2(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_i2(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -568,6 +603,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 3
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -617,11 +653,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
@@ -629,7 +671,7 @@ contains
 
   end subroutine h5md_element_create_time_i2
 
-  subroutine h5md_element_create_time_i3(this, loc, name, data, mode, step, time)
+  subroutine h5md_element_create_time_i3(this, loc, name, data, mode, step, time, offset_by_one)
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
     character(len=*), intent(in) :: name
@@ -637,6 +679,7 @@ contains
     integer, intent(in) :: mode
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
+    logical, intent(in), optional :: offset_by_one
 
     integer, parameter :: rank = 4
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
@@ -684,11 +727,17 @@ contains
        call h5screate_f(H5S_SCALAR_F, s, this% error)
        call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
        call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
+       if (present(offset_by_one)) then
+          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       end if
        call h5dclose_F(this% s, this% error)
        this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
        if (this% has_time) then
           call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
           call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
+          if (present(offset_by_one)) then
+             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
+          end if
           call h5dclose_F(this% t, this% error)
        end if
        call h5sclose_f(s, this% error)
