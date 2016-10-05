@@ -51,8 +51,9 @@ module h5md_module
      procedure, private :: h5md_element_create_fixed_d1
      procedure, private :: h5md_element_create_fixed_i1
      procedure, private :: h5md_element_create_fixed_i2
-     generic, public :: read_fixed => h5md_element_read_fixed_d2
+     generic, public :: read_fixed => h5md_element_read_fixed_d2, h5md_element_read_fixed_i1
      procedure, private :: h5md_element_read_fixed_d2
+     procedure, private :: h5md_element_read_fixed_i1
      procedure :: open_time => h5md_element_open_time
      generic, public :: create_time => h5md_element_create_time_d2, h5md_element_create_time_d1, &
           h5md_element_create_time_ds, h5md_element_create_time_i1, h5md_element_create_time_i2, &
@@ -1324,6 +1325,33 @@ contains
     call h5sclose_f(s, this% error)
 
   end subroutine h5md_element_read_fixed_d2
+
+  subroutine h5md_element_read_fixed_i1(this, loc, name, data)
+    class(h5md_element_t), intent(out) :: this
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    integer, intent(out), allocatable :: data(:)
+
+    integer, parameter :: set_rank = 1
+    integer(HSIZE_T) :: dims(set_rank), maxdims(set_rank)
+    integer(HID_T) :: s
+    integer :: rank
+    logical :: flag
+
+    call h5dopen_f(loc, name, this% id, this% error)
+    call h5dget_space_f(this% id, s, this% error)
+    call h5sis_simple_f(s, flag, this% error)
+    call check_true(flag, 'non-simple dataset in read_fixed')
+    call h5sget_simple_extent_ndims_f(s, rank, this% error)
+    call check_true((rank == set_rank), 'rank /= set_rank in read_fixed')
+    call h5sget_simple_extent_dims_f(s, dims, maxdims, this% error)
+
+    allocate(data(dims(1)))
+    call h5dread_f(this% id, H5T_NATIVE_INTEGER, data, dims, this% error, H5S_ALL_F, s)
+    call h5dclose_f(this% id, this% error)
+    call h5sclose_f(s, this% error)
+
+  end subroutine h5md_element_read_fixed_i1
 
   subroutine check_error(e, msg)
     integer, intent(in) :: e
