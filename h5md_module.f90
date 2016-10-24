@@ -94,6 +94,7 @@ module h5md_module
      module procedure h5md_write_dataset_d2
      module procedure h5md_write_dataset_i2
      module procedure h5md_write_dataset_i1
+     module procedure h5md_write_dataset_d3
      module procedure h5md_write_dataset_d4
      module procedure h5md_write_dataset_is
   end interface h5md_write_dataset
@@ -1689,6 +1690,27 @@ contains
     call h5sclose_f(s, error)
 
   end subroutine h5md_write_dataset_d4
+
+  subroutine h5md_write_dataset_d3(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(in) :: value(:,:,:)
+
+    integer(HID_T) :: d, s, t
+    integer :: error
+    integer, parameter :: rank=3
+    integer(HSIZE_T) :: dims(rank)
+
+    t = H5T_NATIVE_DOUBLE
+    dims = shape(value)
+
+    call h5screate_simple_f(rank, dims, s, error)
+    call h5dcreate_f(loc, name, t, s, d, error)
+    call h5dwrite_f(d, t, value, dims, error)
+    call h5dclose_f(d, error)
+    call h5sclose_f(s, error)
+
+  end subroutine h5md_write_dataset_d3
 
   subroutine h5md_write_dataset_i2(loc, name, value)
     integer(HID_T), intent(inout) :: loc
