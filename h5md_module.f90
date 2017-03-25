@@ -11,6 +11,7 @@ module h5md_module
   public :: h5md_file_t, h5md_element_t
   public :: h5md_check_valid, h5md_check_exists
   public :: h5md_write_attribute
+  public :: h5md_read_attribute
   public :: h5md_write_dataset
   public :: H5MD_FIXED, H5MD_TIME, H5MD_LINEAR, H5MD_STORE_TIME
 
@@ -88,6 +89,10 @@ module h5md_module
      module procedure h5md_write_attribute_i1
      module procedure h5md_write_attribute_ds
   end interface h5md_write_attribute
+
+  interface h5md_read_attribute
+     module procedure h5md_read_attribute_ds
+  end interface h5md_read_attribute
 
   interface h5md_write_dataset
      module procedure h5md_write_dataset_ds
@@ -1515,6 +1520,31 @@ contains
     call h5sclose_f(s, error)
 
   end subroutine h5md_write_attribute_ds
+
+  subroutine h5md_read_attribute_ds(loc, name, value)
+    integer(HID_T), intent(inout) :: loc
+    character(len=*), intent(in) :: name
+    double precision, intent(out) :: value
+
+    integer(HID_T) :: a, s
+    integer :: error, rank
+    integer(HSIZE_T) :: dims(1)
+    logical :: flag
+
+    call h5aopen_f(loc, name, a, error)
+    call h5aget_space_f(a, s, error)
+    call h5sis_simple_f(s, flag, error)
+    if (.not. flag) then
+       write(*,*) 'attribute does not have a simple dataspace in h5md_read_attribute'
+       stop
+    end if
+    call h5sget_simple_extent_ndims_f(s, rank, error)
+    if (rank /= 0) error stop 'non-zero rank in h5md_read_attribute'
+    call h5aread_f(a, H5T_NATIVE_DOUBLE, value, dims, error)
+    call h5sclose_f(s, error)
+    call h5aclose_f(a, error)
+
+  end subroutine h5md_read_attribute_ds
 
   subroutine h5md_extend(dset, rank, dims, maxdims, ext_size)
     integer(HID_T), intent(inout) :: dset
