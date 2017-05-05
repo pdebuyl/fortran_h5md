@@ -56,16 +56,19 @@ module h5md_module
      procedure, private :: h5md_element_read_fixed_d2
      procedure, private :: h5md_element_read_fixed_i1
      procedure :: open_time => h5md_element_open_time
-     generic, public :: create_time => h5md_element_create_time_d2, h5md_element_create_time_d1, &
-          h5md_element_create_time_ds, h5md_element_create_time_i1, h5md_element_create_time_i2, &
-          h5md_element_create_time_i3, h5md_element_create_time_d3
-     procedure, private :: h5md_element_create_time_d2
-     procedure, private :: h5md_element_create_time_d1
+     generic, public :: create_time => &
+          h5md_element_create_time_ds, h5md_element_create_time_d1, &
+          h5md_element_create_time_d2, h5md_element_create_time_d3, &
+          h5md_element_create_time_is, h5md_element_create_time_i1, &
+          h5md_element_create_time_i2, h5md_element_create_time_i3
      procedure, private :: h5md_element_create_time_ds
+     procedure, private :: h5md_element_create_time_d1
+     procedure, private :: h5md_element_create_time_d2
+     procedure, private :: h5md_element_create_time_d3
+     procedure, private :: h5md_element_create_time_is
      procedure, private :: h5md_element_create_time_i1
      procedure, private :: h5md_element_create_time_i2
      procedure, private :: h5md_element_create_time_i3
-     procedure, private :: h5md_element_create_time_d3
      generic, public :: append => h5md_element_append_d2, h5md_element_append_d1, &
           h5md_element_append_ds, h5md_element_append_i1, h5md_element_append_i2, &
           h5md_element_append_i3, h5md_element_append_d3
@@ -237,520 +240,70 @@ contains
 
   end subroutine h5md_element_close
 
-  subroutine h5md_element_create_time_d2(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    double precision, intent(in) :: data(:,:)
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
+  function chunking(dims, maxdims) result(c)
+    integer(HSIZE_T), intent(in) :: dims(:)
+    integer(HSIZE_T), intent(in) :: maxdims(:)
+    integer(HSIZE_T) :: c(size(dims))
 
-    integer, parameter :: rank = 3
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
+    integer :: rank, i
 
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1) = size(data, 1)
-    maxdims(1) = dims(1)
-    chunk_dims(1) = dims(1)
-    dims(2) = size(data, 2)
-    maxdims(2) = dims(2)
-    chunk_dims(2) = min(dims(2), int(128, HSIZE_T))
-    dims(3) = 0
-    maxdims(3) = H5S_UNLIMITED_F
-    chunk_dims(3) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_DOUBLE, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
+    rank = size(dims)
+    if (rank>1) then
+       c(1:rank-1) = dims
+       do i = 1, rank-1
+          c(i) = min(c(i), 512_HSIZE_T)
+       end do
+       c(rank) = max(1_HSIZE_T, 512_HSIZE_T*1024_HSIZE_T/product(c(1:rank-1)))
+    else
+       c(rank) = 2048
     end if
 
-  end subroutine h5md_element_create_time_d2
+  end function chunking
 
-  subroutine h5md_element_create_time_d1(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    double precision, intent(in) :: data(:)
+  subroutine h5md_populate_step_time(elem, mode, step, time)
+    type(h5md_element_t), intent(inout) :: elem
     integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
+    integer, intent(in) :: step
+    double precision, intent(in) :: time
 
-    integer, parameter :: rank = 2
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
     integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1) = size(data, 1)
-    maxdims(1) = dims(1)
-    chunk_dims(1) = dims(1)
-    dims(rank) = 0
-    maxdims(rank) = H5S_UNLIMITED_F
-    chunk_dims(rank) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_DOUBLE, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
+    integer(HSIZE_T) :: dims(1), maxdims(1), chunk_dims(1)
 
     if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
+       elem%type = H5MD_TIME
        dims(1) = 0
        maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
+       chunk_dims(1) = 2048
+       call h5screate_simple_f(1, dims, s, elem%error, maxdims)
+       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, elem%error)
+       call h5pset_chunk_f(plist, 1, chunk_dims, elem%error)
+       call h5dcreate_f(elem%id, 'step', H5T_NATIVE_INTEGER, s, elem%s, elem%error, plist)
        if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
+          call h5dcreate_f(elem%id, 'time', H5T_NATIVE_DOUBLE, s, elem%t, elem%error, plist)
+          elem%has_time = .true.
        else
-          this% has_time = .false.
+          elem%has_time = .false.
        end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
+       call h5pclose_f(plist, elem%error)
+       call h5sclose_f(s, elem%error)
     else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
+       elem%type = H5MD_LINEAR
+       call h5screate_f(H5S_SCALAR_F, s, elem%error)
+       call h5dcreate_f(elem%id, 'step', H5T_NATIVE_INTEGER, s, elem%s, elem%error)
+       call h5dwrite_f(elem%s, H5T_NATIVE_INTEGER, step, dims, elem%error, H5S_ALL_F, s)
+       call h5dclose_F(elem%s, elem%error)
+       elem%has_time = (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME)
+       if (elem%has_time) then
+          call h5dcreate_f(elem%id, 'time', H5T_NATIVE_DOUBLE, s, elem%t, elem%error)
+          call h5dwrite_f(elem%t, H5T_NATIVE_DOUBLE, time, dims, elem%error, H5S_ALL_F, s)
+          call h5dclose_F(elem%t, elem%error)
        end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
+       call h5sclose_f(s, elem%error)
     end if
 
-  end subroutine h5md_element_create_time_d1
+  end subroutine h5md_populate_step_time
 
-  subroutine h5md_element_create_time_ds(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    double precision, intent(in) :: data
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
-
-    integer, parameter :: rank = 1
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(rank) = 0
-    maxdims(rank) = H5S_UNLIMITED_F
-    chunk_dims(rank) = 8
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_DOUBLE, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
-    end if
-
-  end subroutine h5md_element_create_time_ds
-
-  subroutine h5md_element_create_time_d3(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    double precision, intent(in) :: data(:,:,:)
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
-
-    integer, parameter :: rank = 4
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1:rank-1) = shape(data)
-    maxdims = dims
-    chunk_dims = dims
-    dims(rank) = 0
-    maxdims(rank) = H5S_UNLIMITED_F
-    chunk_dims(rank) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_DOUBLE, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
-    end if
-
-  end subroutine h5md_element_create_time_d3
-
-  subroutine h5md_element_create_time_i1(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    integer, intent(in) :: data(:)
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
-
-    integer, parameter :: rank = 2
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1) = size(data, 1)
-    maxdims(1) = dims(1)
-    chunk_dims(1) = dims(1)
-    dims(rank) = 0
-    maxdims(rank) = H5S_UNLIMITED_F
-    chunk_dims(rank) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_INTEGER, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
-    end if
-
-  end subroutine h5md_element_create_time_i1
-
-  subroutine h5md_element_create_time_i2(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    integer, intent(in) :: data(:,:)
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
-
-    integer, parameter :: rank = 3
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1) = size(data, 1)
-    maxdims(1) = dims(1)
-    chunk_dims(1) = dims(1)
-    dims(2) = size(data, 2)
-    maxdims(2) = dims(2)
-    chunk_dims(2) = min(dims(2), int(128, HSIZE_T))
-    dims(3) = 0
-    maxdims(3) = H5S_UNLIMITED_F
-    chunk_dims(3) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_INTEGER, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
-    end if
-
-  end subroutine h5md_element_create_time_i2
-
-  subroutine h5md_element_create_time_i3(this, loc, name, data, mode, step, time, offset_by_one)
-    class(h5md_element_t), intent(out) :: this
-    integer(HID_T), intent(inout) :: loc
-    character(len=*), intent(in) :: name
-    integer, intent(in) :: data(:,:,:)
-    integer, intent(in) :: mode
-    integer, intent(in), optional :: step
-    double precision, intent(in), optional :: time
-    logical, intent(in), optional :: offset_by_one
-
-    integer, parameter :: rank = 4
-    integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
-
-    call h5gcreate_f(loc, name, this% id, this% error)
-    call h5md_check_valid(this% id, 'invalid id in create_time')
-
-    dims(1:rank-1) = shape(data)
-    maxdims(1:rank-1) = dims(1:rank-1)
-    chunk_dims(1:rank-1) = dims(1:rank-1)
-    chunk_dims(rank-1) = min(dims(rank-1), int(128, HSIZE_T))
-    dims(rank) = 0
-    maxdims(rank) = H5S_UNLIMITED_F
-    chunk_dims(rank) = 1
-
-    call h5screate_simple_f(rank, dims, s, this% error, maxdims)
-
-    call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-    call h5pset_chunk_f(plist, rank, chunk_dims, this% error)
-    call h5dcreate_f(this% id, 'value', H5T_NATIVE_INTEGER, s, this% v, this% error, plist)
-    call h5pclose_f(plist, this% error)
-    call h5sclose_f(s, this% error)
-
-    if (iand(mode, H5MD_TIME) == H5MD_TIME) then
-       this% type = H5MD_TIME
-       dims(1) = 0
-       maxdims(1) = H5S_UNLIMITED_F
-       chunk_dims(1) = 8
-       call h5screate_simple_f(1, dims, s, this% error, maxdims)
-       call h5pcreate_f(H5P_DATASET_CREATE_F, plist, this% error)
-       call h5pset_chunk_f(plist, 1, chunk_dims, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error, plist)
-       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error, plist)
-          this% has_time = .true.
-       else
-          this% has_time = .false.
-       end if
-       call h5pclose_f(plist, this% error)
-       call h5sclose_f(s, this% error)
-    else if (iand(mode,H5MD_LINEAR) == H5MD_LINEAR) then
-       this% type = H5MD_LINEAR
-       if (.not. present(step)) stop 'step required for H5MD_LINEAR'
-       call h5screate_f(H5S_SCALAR_F, s, this% error)
-       call h5dcreate_f(this% id, 'step', H5T_NATIVE_INTEGER, s, this% s, this% error)
-       call h5dwrite_f(this% s, H5T_NATIVE_INTEGER, step, dims, this% error, H5S_ALL_F, s)
-       if (present(offset_by_one)) then
-          if (offset_by_one) call h5md_write_attribute(this%s, 'offset', step)
-       end if
-       call h5dclose_F(this% s, this% error)
-       this% has_time = (present(time) .and. (iand(mode,H5MD_STORE_TIME)==H5MD_STORE_TIME))
-       if (this% has_time) then
-          call h5dcreate_f(this% id, 'time', H5T_NATIVE_DOUBLE, s, this% t, this% error)
-          call h5dwrite_f(this% t, H5T_NATIVE_DOUBLE, time, dims, this% error, H5S_ALL_F, s)
-          if (present(offset_by_one)) then
-             if (offset_by_one) call h5md_write_attribute(this%t, 'offset', time)
-          end if
-          call h5dclose_F(this% t, this% error)
-       end if
-       call h5sclose_f(s, this% error)
-    end if
-
-  end subroutine h5md_element_create_time_i3
+  include 'h5md_element_create_time.f90'
 
   subroutine h5md_element_append_d2(this, data, step, time)
     class(h5md_element_t), intent(inout) :: this
@@ -1326,7 +879,8 @@ contains
     call h5sget_simple_extent_dims_f(s, dims, maxdims, this% error)
 
     allocate(data(dims(1), dims(2)))
-    call h5dread_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, H5S_ALL_F, s)
+    call h5dread_f(this% id, H5T_NATIVE_DOUBLE, data, dims, this% error, &
+         mem_space_id=H5S_ALL_F, file_space_id=s)
     call h5dclose_f(this% id, this% error)
     call h5sclose_f(s, this% error)
 
