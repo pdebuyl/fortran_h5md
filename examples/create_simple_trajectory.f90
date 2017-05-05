@@ -3,7 +3,7 @@ program create
   use h5md_module
   implicit none
 
-  integer, parameter :: N = 4
+  integer, parameter :: N = 4096
   integer, parameter :: interval = 10
   double precision :: pos(3, N), v(3, N)
   double precision :: edges(3)
@@ -12,13 +12,14 @@ program create
   type(h5md_element_t) :: pos_e, vel_e, e, temp_e
   integer(HID_T) :: colloids, box_group
   integer :: error
+  integer :: h5md_mode
 
   integer :: t
   double precision :: temperature
 
   call h5open_f(error)
 
-  call f% create('simple_trajectory.h5', 'fortran_h5md:create_simple_colloid', '0.0 dev', 'Pierre de Buyl')
+  call f% create('simple_trajectory.h5', 'fortran_h5md:create_simple_trajectory', '0.0 dev', 'Pierre de Buyl')
   call h5gcreate_f(f% particles, 'colloids', colloids, error)
 
   call h5gcreate_f(colloids, 'box', box_group, error)
@@ -34,11 +35,12 @@ program create
   pos(:, 4) = [3, 3, 1]
   v = 0
 
-  call pos_e% create_time(colloids, 'position', pos, H5MD_LINEAR, interval)
-  call vel_e% create_time(colloids, 'velocity', v, H5MD_LINEAR, interval)
+  h5md_mode = ior(H5MD_FIXED,H5MD_STORE_TIME)
+  call pos_e% create_time(colloids, 'position', pos, h5md_mode, step=interval, time=0.1d0*interval)
+  call vel_e% create_time(colloids, 'velocity', v, h5md_mode, step=interval, time=0.1d0*interval)
   call h5gclose_f(colloids, error)
 
-  call temp_e% create_time(f% observables, 'temperature', temperature, H5MD_TIME)
+  call temp_e% create_time(f% observables, 'temperature', temperature, h5md_mode, time=0.1d0)
 
   call pos_e% append(pos)
   call vel_e% append(v)
