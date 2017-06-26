@@ -249,7 +249,7 @@ contains
 
     rank = size(dims)
     if (rank>1) then
-       c(1:rank-1) = dims
+       c(1:rank-1) = dims(1:rank-1)
        do i = 1, rank-1
           c(i) = min(c(i), 512_HSIZE_T)
        end do
