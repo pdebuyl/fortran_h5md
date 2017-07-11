@@ -253,7 +253,7 @@ contains
        do i = 1, rank-1
           c(i) = min(c(i), 512_HSIZE_T)
        end do
-       c(rank) = max(1_HSIZE_T, 512_HSIZE_T*1024_HSIZE_T/product(c(1:rank-1)))
+       c(rank) = max(1_HSIZE_T, 512_HSIZE_T*1024_HSIZE_T/product(dims(1:rank-1)))
     else
        c(rank) = 2048
     end if
