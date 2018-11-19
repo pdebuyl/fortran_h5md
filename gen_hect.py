@@ -16,7 +16,7 @@ DECL[3] = '(:,:,:)'
 
 
 create_time_template = """
-  subroutine h5md_element_create_time_{datatype}{datarank}(this, loc, name, data, mode, step, time, chunks)
+  subroutine h5md_element_create_time_{datatype}{datarank}(this, loc, name, data, mode, step, time, chunks, step_offset, time_offset)
     integer, parameter :: rank = {rank}
     class(h5md_element_t), intent(out) :: this
     integer(HID_T), intent(inout) :: loc
@@ -26,9 +26,11 @@ create_time_template = """
     integer, intent(in), optional :: step
     double precision, intent(in), optional :: time
     integer, intent(in), optional :: chunks(rank)
+    integer, intent(in), optional :: step_offset
+    double precision, intent(in), optional :: time_offset
 
     integer(HSIZE_T) :: dims(rank), maxdims(rank), chunk_dims(rank)
-    integer(HID_T) :: s, plist
+    integer(HID_T) :: s, plist, object_id
 
     call h5gcreate_f(loc, name, this% id, this% error)
     call h5md_check_valid(this% id, 'invalid id in create_time')
@@ -52,11 +54,23 @@ create_time_template = """
     if (iand(mode, H5MD_LINEAR) == H5MD_LINEAR) then
       if (.not. present(step)) error stop 'no step in h5md_element_create_time'
       if (iand(mode, H5MD_STORE_TIME) == H5MD_STORE_TIME) then
-          if (.not. present(time)) error stop 'no step in h5md_element_create_time'
+          if (.not. present(time)) error stop 'no time in h5md_element_create_time'
       end if
     end if
 
     call h5md_populate_step_time(this, mode, step, time)
+
+    if (present(step_offset)) then
+      call h5oopen_f(this%id, 'step', object_id, this%error)
+      call h5md_write_attribute(object_id, 'offset', step_offset)
+      call h5oclose_f(object_id, this%error)
+    end if
+
+    if (present(time_offset)) then
+      call h5oopen_f(this%id, 'time', object_id, this%error)
+      call h5md_write_attribute(object_id, 'offset', time_offset)
+      call h5oclose_f(object_id, this%error)
+    end if
 
   end subroutine h5md_element_create_time_{datatype}{datarank}
 """
