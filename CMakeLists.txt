@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
 
 project(fortran_h5md Fortran)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.12)
+  cmake_policy(SET CMP0074 NEW)
+endif()
+
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
 
 find_package(HDF5 COMPONENTS Fortran REQUIRED)
