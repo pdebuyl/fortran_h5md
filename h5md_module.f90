@@ -746,7 +746,7 @@ contains
     double precision, intent(in) :: data(:)
 
     integer(HSIZE_T) :: dims(1)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
@@ -766,7 +766,7 @@ contains
     double precision, intent(in) :: data(:,:)
 
     integer(HSIZE_T) :: dims(2)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
@@ -786,7 +786,7 @@ contains
     double precision, intent(in) :: data(:,:,:)
 
     integer(HSIZE_T) :: dims(3)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
@@ -806,7 +806,7 @@ contains
     double precision, intent(in) :: data(:,:,:,:)
 
     integer(HSIZE_T) :: dims(4)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
@@ -826,7 +826,7 @@ contains
     integer, intent(in) :: data(:)
 
     integer(HSIZE_T) :: dims(1)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
@@ -847,7 +847,7 @@ contains
 
     integer, parameter :: rank=2
     integer(HSIZE_T) :: dims(rank)
-    integer :: s
+    integer(HID_T) :: s
 
     dims = shape(data)
 
